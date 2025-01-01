@@ -5,17 +5,29 @@ Action::Action()
 }
 
 Action::Action(const std::string& _type, const std::string& _name)
-	:name(_name)
-	, type(_type)
+	:m_name(_name)
+	, m_type(_type)
 {
 }
 
-const std::string& Action::getName()
+Action::Action(const sf::Vector2f& pos)
+	:m_pos(pos)
 {
-	return name;
+	m_type = "START";
+	m_name = "MOUSE_MOVED";
 }
 
-const std::string& Action::getType()
+const std::string& Action::name() const
 {
-	return type;
+	return m_name;
+}
+
+const std::string& Action::type() const
+{
+	return m_type;
+}
+
+const sf::Vector2f& Action::pos() const
+{
+	return m_pos;
 }

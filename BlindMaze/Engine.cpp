@@ -33,7 +33,7 @@ void Engine::init(const std::string& config)
 		m_window.create(sf::VideoMode(winConf.W, winConf.H, sf::Style::Close), winConf.T);
 	}
 
-	m_window.setFramerateLimit(winConf.FS);
+	m_window.setFramerateLimit(winConf.FL);
 
 	changeScene("PLAY", std::make_shared<ScenePlay>(this));
 }
@@ -57,7 +57,29 @@ void Engine::sUserInput()
 			quit();
 		}
 
+		else if (event.type == sf::Event::KeyPressed || 
+				event.type == sf::Event::KeyReleased)
+		{
 
+			if (currentScene()->getActionMap().find(event.key.code) ==
+				currentScene()->getActionMap().end())
+			{
+				continue;
+			}
+
+			std::string actionType = 
+				(event.type == sf::Event::KeyPressed) ? "START" : "END";
+
+			currentScene()->sDoAction(Action(
+				actionType,
+				currentScene()->getActionMap().at(event.key.code)
+			));
+
+		}
+		else if (event.type == sf::Event::MouseMoved)
+		{
+			currentScene()->sDoAction(Action(sf::Vector2f(event.mouseMove.x, event.mouseMove.y)));
+		}
 
 	}
 }

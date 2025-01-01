@@ -6,9 +6,11 @@
 #include <tuple>
 
 typedef std::tuple<
-	CNode,
-	CState,
-	CTransform
+	CInput,
+	CTransform,
+	CBoundingBox,
+	CVertex,
+	CLight
 > ComponentTuple;
 
 class Entity

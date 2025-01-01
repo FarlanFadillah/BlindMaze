@@ -132,6 +132,7 @@
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Entity.hpp" />
     <ClInclude Include="EntityManager.hpp" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="ScenePlay.h" />
     <ClInclude Include="Vec2.hpp" />

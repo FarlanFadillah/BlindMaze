@@ -40,16 +40,17 @@ std::shared_ptr<Entity> EntityManager::addEntity(const std::string& tag)
 	return entity;
 }
 
+void EntityManager::addEntity(const std::shared_ptr<Entity> entity, const std::string& tag)
+{
+	m_entitiesMap[tag].push_back(entity);
+}
+
 void EntityManager::update()
 {
 	for (const auto e : m_entitiesToAdd)
 	{
 		m_entities.push_back(e);
 		m_entitiesMap[e->tag()].push_back(e);
-		if (e->tag() != "Tile" && e->tag() != "Wall" && e->tag() != "Gui")
-		{
-			m_entitiesMap["Render"].push_back(e);
-		}
 	}
 
 	// clear queue when all are added

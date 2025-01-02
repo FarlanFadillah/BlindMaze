@@ -20,6 +20,7 @@ ScenePlay::ScenePlay(Engine* engine)
 	registerAction(sf::Keyboard::F3, "DRAW_ENTITIES");
 	registerAction(sf::Keyboard::F4, "DRAW_MOUSEPOS");
 	registerAction(sf::Keyboard::F5, "TRANSPARENT_BOX");
+	registerAction(sf::Keyboard::F6, "COLLISION");
 
 
 	player = m_entityManager.addEntity("player");
@@ -41,7 +42,7 @@ ScenePlay::ScenePlay(Engine* engine)
 	torch2->addComponent<CBoundingBox>(Vec2(8, 8));
 	torch2->addComponent<CLight>(360, 250);
 
-	readMap();
+	///readMap();
 
 	
 
@@ -60,7 +61,7 @@ void ScenePlay::update()
 	{
 		m_entityManager.update();
 		sMovement();
-		sCollision();
+		if(m_collision) sCollision();
 		sRayCasting();
 	}
 
@@ -192,6 +193,9 @@ void ScenePlay::sDoAction(const Action& action)
 		else if (action.name() == "TRANSPARENT_BOX")
 		{
 			m_transParentBox = !m_transParentBox;
+		}else if (action.name() == "COLLISION")
+		{
+			m_collision = !m_collision;
 		}
 	}
 }

@@ -21,6 +21,7 @@ private:
 	bool m_drawRay			= false;
 
 	bool m_transParentBox	= true;
+	bool m_collision		= true;
 
 	sf::Vector2f m_pos;
 

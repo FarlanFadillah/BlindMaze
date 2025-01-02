@@ -46,11 +46,26 @@ public:
         return (rhs1.x * rhs2.y) - (rhs1.y * rhs2.x);
     }
 
+    std::vector<sf::Vertex> getAllDirection(std::vector<sf::Vertex>& vectors, const int& vertices, const std::shared_ptr<Entity>& player, const sf::Vector2f& m_pos, const float scope, const float length)
+    {
+        int step = 360 / vertices;
+        auto& cp = player->getComponent<CTransform>().pos;
+        for (int i = 0; i < vertices; i++)
+        {
+            float velx = (float)cos(i * step * PI / 180);
+            float vely = (float)sin(i * step * PI / 180);
+            auto vertex = sf::Vertex(sf::Vector2f((velx * length) + cp.x, (vely * length) + cp.y), sf::Color::Black);
+            //std::cout << vertex.position.x << " " << vertex.position.y << " va pos\n";
+            validateVector(vectors, vertex, m_pos, cp, scope);
+        }
+
+        return vectors;
+    }
+
     std::vector<sf::Vertex> getRectanglePoints( std::vector<sf::Vertex>& vectors,std::vector<std::shared_ptr<Entity>>& boxes, const std::shared_ptr<Entity> player, sf::RenderWindow& window, const sf::Vector2f& m_pos, const float scope, const float length)
     {
         auto winPos = window.getSize();
         auto& cp = player->getComponent<CTransform>().pos;
-
         /*validateVector(vectors,
             sf::Vertex(sf::Vector2f(0, 0), sf::Color::Black),
             m_pos, cp, scope / 2);
@@ -66,21 +81,19 @@ public:
         validateVector(vectors,
             sf::Vertex(sf::Vector2f(winPos.x, 0), sf::Color::Black),
             m_pos, cp, scope / 2);*/
-
-
         for (auto& b : boxes)
         {
-            auto& temp = b->getComponent<CVertex>().vertex;
-            for (int i = 0; i < 4; i++)
+            for (auto& temp : b->getComponent<CVertex>().vertex)
             {
-                Vec2 normal(temp[i].position.x, temp[i].position.y);
+                if (outOfRange(length, temp.position, cp)) continue;
+                Vec2 normal(temp.position.x, temp.position.y);
                 normal.normalize();
-                auto pos = sf::Vector2f(normal.x + cp.x, normal.y + cp.x) ;
+                auto pos = sf::Vector2f(normal.x + cp.x, normal.y + cp.x);
 
                 /*validateVector(vectors,
                     sf::Vertex(pos, sf::Color(i*5, i*5, i*5)), 
                     m_pos, cp, scope / 2);*/
-                float angle = vectorToDegree(cp, temp[0]);
+                float angle = vectorToDegree(sf::Vector2f(cp.x, cp.y), temp.position);
 
                 //std::cout << cos(toRadian(angle+30)) + cp.x << " " << sin(toRadian(angle+30)) + cp.y << "\n";
                 float off = 0.001f;
@@ -96,11 +109,18 @@ public:
         return vectors;
     }
 
+    bool outOfRange(float length, const sf::Vector2f& vec, const Vec2& cp)
+    {
+        Vec2 temp(vec.x - cp.x, vec.y - cp.y);
+
+        return temp.length() > length;
+    }
+
     void validateVector(std::vector<sf::Vertex>& vectors, const sf::Vertex& vertex, const sf::Vector2f& m_pos, const Vec2& cp, const float scope)
     {
 
-        float mouse_angle = vectorToDegree(cp, m_pos);
-        float vertex_angle = vectorToDegree(cp, vertex.position);
+        float mouse_angle = vectorToDegree(sf::Vector2f(cp.x, cp.y), m_pos);
+        float vertex_angle = vectorToDegree(sf::Vector2f(cp.x, cp.y), vertex.position);
         if (scope > 180)
         {
             vectors.push_back(vertex);
@@ -147,81 +167,79 @@ public:
         {
             vectors[i] = vecTemp[angle[i].first];
         }
-
     }
 
 
-    std::vector<std::pair<int, float>> mesureAngle(std::vector<sf::Vertex>& vectors, Vec2 cp, const sf::Vector2f& m_pos, float scope)
+    std::vector<std::pair<int, float>> mesureAngle(std::vector<sf::Vertex>& vectors, Vec2 cp, const sf::Vector2f& m_pos, const float scope)
     {
-        float mPos = vectorToDegree(cp, m_pos);
+        float mPos = vectorToDegree(sf::Vector2f(cp.x, cp.y), sf::Vector2f(m_pos.x, m_pos.y));
         std::vector<std::pair<int, float>> result;
         if (scope > 180)
         {
             for (int i = 0; i < vectors.size(); i++)
             {
-                result.push_back(std::make_pair(i, vectorToDegree(cp, vectors[i]))); 
+                result.push_back(std::make_pair(i, vectorToDegree(sf::Vector2f(cp.x, cp.y), vectors[i])));
             }
         }
         else if (mPos <= scope / 2 || mPos >= 360 - scope / 2)
         {
-            //std::cout << "true" << std::endl;
             for (int i = 0; i < vectors.size(); i++)
             {
-                result.push_back(std::make_pair(i, vectorToDegreeCustom(cp, vectors[i], mPos, scope)));
+                float deg = vectorToDegreeCustom(cp, vectors[i]);
+                result.push_back(std::make_pair(i, deg));
             }
         }
         else
         {
             for (int i = 0; i < vectors.size(); i++)
             {
-                result.push_back(std::make_pair(i, vectorToDegree(cp, vectors[i])));
+                result.push_back(std::make_pair(i, vectorToDegree(sf::Vector2f(cp.x, cp.y), vectors[i])));
             }
         }
 
         sortMap(result);
 
+        /*for (auto& e : result)
+        {
+            std::cout << e.first << " " << e.second << std::endl;
+        }*/
+
         return result;
     }
 
-    float vectorToDegree(const Vec2&  startPoint, const sf::Vertex& vec)
+    float vectorToDegree(const sf::Vector2f& startPoint, const sf::Vertex& vec)
     {
         float angleL = atan2(startPoint.y - vec.position.y, startPoint.x - vec.position.x);
-        angleL = (float)(angleL * 180 / PI);
-        if (angleL <= 0)
+        angleL = (float)(angleL * 180 / PI) - 180;
+        if (angleL < 0)
         {
             angleL += 360;
         }
-
+        //std::cout << angleL << std::endl;
         return angleL;
     }
 
-    float vectorToDegreeCustom(const Vec2& startPoint, const sf::Vertex& vec, float m, float scope)
+    float vectorToDegreeCustom(const Vec2& startPoint, const sf::Vertex& vec)
     {
-        float left = m - (scope / 2);
-        if (m >= 0 && m <= scope / 2)
-        {
-            left += 360;
-        }
         float angleL = atan2(startPoint.y - vec.position.y, startPoint.x - vec.position.x);
-        if (angleL >= left && angleL <= 360)
-        {
-            return angleL - left;
-        }
-        else if (angleL >= 0 && angleL <= m + (scope / 2))
-        {
-            return angleL - left + 361;
-        }
-        return 0;
-    }
-    float vectorToDegree(const Vec2& startPoint, const sf::Vector2f& vec)
-    {
-        float angleL = atan2(startPoint.y - vec.y, startPoint.x - vec.x);
         angleL = (float)(angleL * 180 / PI);
-        if (angleL <= 0)
+        if (angleL < 0)
         {
             angleL += 360;
         }
+        //std::cout << angleL << std::endl;
+        return angleL;
+    }
 
+    float vectorToDegree(const sf::Vector2f& startPoint, const sf::Vector2f& vec)
+    {
+        float angleL = atan2(startPoint.y - vec.y, startPoint.x - vec.x);
+        angleL = (float)(angleL * 180 / PI) - 180;
+        if (angleL < 0)
+        {
+            angleL += 360;
+        }
+        //std::cout << angleL << std::endl;
         return angleL;
     }
 
@@ -256,23 +274,9 @@ public:
         );
     }
 
-    std::vector<sf::Vertex> getAllDirection( std::vector<sf::Vertex>& vectors,const int& vertices, const std::shared_ptr<Entity>& player, const sf::Vector2f& m_pos, const float scope, const float length)
-    {
-        int step = 360 / vertices;
-        auto& cp = player->getComponent<CTransform>().pos;
-        for (int i = 0; i < vertices; i++)
-        {
-            float velx = (float)cos(i * step * PI / 180);
-            float vely = (float)sin(i * step * PI / 180);
-            auto vertex = sf::Vertex(sf::Vector2f((velx * length) + cp.x, (vely * length) + cp.y), sf::Color::Black);
-            //std::cout << vertex.position.x << " " << vertex.position.y << " va pos\n";
-            validateVector(vectors, vertex, m_pos, cp, scope);
-        }
+    
 
-        return vectors;
-    }
-
-    void IntersectRay(std::vector<sf::Vertex>& angle, const Vec2& pPos, const std::vector<std::shared_ptr<Entity>> entities)
+    void IntersectRay(std::vector<sf::Vertex>& angle, const Vec2& pPos, const std::vector<std::shared_ptr<Entity>>& entities)
     {
         for (auto& e : angle)
         {
@@ -281,20 +285,20 @@ public:
             {
                 const auto& f = wall->getComponent<CVertex>().vertex;
                 intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f[0].position.x, f[0].position.y),
-                    Vec2(f[1].position.x, f[1].position.y));
+                    Vec2(f.at(0).position.x, f.at(0).position.y),
+                    Vec2(f.at(1).position.x, f.at(1).position.y));
 
                 intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f[1].position.x, f[1].position.y),
-                    Vec2(f[2].position.x, f[2].position.y));
+                    Vec2(f.at(1).position.x, f.at(1).position.y),
+                    Vec2(f.at(2).position.x, f.at(2).position.y));
 
                 intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f[2].position.x, f[2].position.y),
-                    Vec2(f[3].position.x, f[3].position.y));
+                    Vec2(f.at(2).position.x, f.at(2).position.y),
+                    Vec2(f.at(3).position.x, f.at(3).position.y));
 
                 intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f[3].position.x, f[3].position.y),
-                    Vec2(f[0].position.x, f[0].position.y));
+                    Vec2(f.at(3).position.x, f.at(3).position.y),
+                    Vec2(f.at(0).position.x, f.at(0).position.y));
 
             }
         }
@@ -337,6 +341,51 @@ public:
                 }
                 );
         }
+    }
+
+
+    Vec2 getOverlap(const std::shared_ptr<Entity>& entity, const std::shared_ptr<Entity>& object) const
+    {
+        auto& eT = entity->getComponent<CTransform>();
+        auto& eSize = entity->getComponent<CBoundingBox>().halfSize;
+        auto& ePos = eT.pos;
+
+        auto& oT = object->getComponent<CTransform>();
+        auto& oSize = object->getComponent<CBoundingBox>().halfSize;
+        auto& oPos = oT.pos;
+
+        auto dx = abs(oPos.x - ePos.x);
+        auto dy = abs(oPos.y - ePos.y);
+
+
+        if (dx <= eSize.x + oSize.x || dy <= eSize.y + oSize.y)
+        {
+            return Vec2((eSize.x + oSize.x) - dx, (eSize.y + oSize.y) - dy);
+        }
+        return Vec2(0, 0);
+    }
+
+    Vec2 getPrevOverlap(const std::shared_ptr<Entity>& entity, const std::shared_ptr<Entity>& object) const
+    {
+        auto& eT = entity->getComponent<CTransform>();
+        auto& eSize = entity->getComponent<CBoundingBox>().halfSize;
+        auto& ePos = eT.prevPos;
+
+
+        auto& oT = object->getComponent<CTransform>();
+        auto& oSize = object->getComponent<CBoundingBox>().halfSize;
+        auto& oPos = oT.prevPos;
+
+
+        auto dx = abs(ePos.x - oPos.x);
+        auto dy = abs(ePos.y - oPos.y);
+
+
+        if (dx <= eSize.x + oSize.x || dy <= eSize.y + oSize.y)
+        {
+            return Vec2((eSize.x + oSize.x) - dx, (eSize.y + oSize.y) - dy);
+        }
+        return Vec2(0, 0);
     }
 };
 

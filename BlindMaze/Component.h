@@ -12,6 +12,8 @@ class CTransform : public Component
 {
 public:
 	Vec2 pos = Vec2(0,0);
+	Vec2 prevPos = Vec2(0,0);
+
 	Vec2 vel = Vec2(1,1);
 	CTransform()
 	{
@@ -19,7 +21,8 @@ public:
 	}
 	CTransform(const Vec2& _pos, const Vec2& _vel)
 		:pos(_pos),
-		vel(_vel)
+		vel(_vel),
+		prevPos(_pos)
 	{
 	}
 };
@@ -32,7 +35,6 @@ public:
 
 	CBoundingBox()
 	{
-
 	}
 	CBoundingBox(const Vec2& _size)
 		:size(_size)
@@ -57,20 +59,17 @@ public:
 class CVertex : public Component
 {
 public:
-	sf::Vertex* vertex;
+	std::vector<sf::Vertex> vertex;
 
 	CVertex(){}
 	CVertex(const Vec2& pos, const Vec2& size) {
 
 		float ax = pos.x - size.x/2;
 		float ay = pos.y - size.y/2;
-
-		vertex = new sf::Vertex[4]{
-				sf::Vertex(sf::Vector2f(ax, ay), sf::Color::Green),
-				sf::Vertex(sf::Vector2f(ax, ay + size.y), sf::Color::Green),
-				sf::Vertex(sf::Vector2f(ax + size.x, ay + size.y), sf::Color::Green),
-				sf::Vertex(sf::Vector2f(ax + size.x, ay), sf::Color::Green)
-		};
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay + size.y), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax + size.x, ay + size.y), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax + size.x, ay), sf::Color::Green));
 	}
 };
 

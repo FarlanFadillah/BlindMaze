@@ -20,8 +20,6 @@ void Engine::init(const std::string& config)
 	{
 		std::string token;
 		fin >> token >> winConf.W >> winConf.H >> winConf.FL >> winConf.FS >> winConf.T;
-
-		std::cout << winConf.W;
 	}
 
 	if (winConf.FS)

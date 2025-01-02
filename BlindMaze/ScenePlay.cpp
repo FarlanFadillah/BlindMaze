@@ -1,4 +1,6 @@
 #include "ScenePlay.h"
+#include <fstream>
+#include <json/json.h>
 
 
 ScenePlay::ScenePlay()
@@ -17,6 +19,7 @@ ScenePlay::ScenePlay(Engine* engine)
 	registerAction(sf::Keyboard::F2, "DRAW_RAY");
 	registerAction(sf::Keyboard::F3, "DRAW_ENTITIES");
 	registerAction(sf::Keyboard::F4, "DRAW_MOUSEPOS");
+	registerAction(sf::Keyboard::F5, "TRANSPARENT_BOX");
 
 
 	player = m_entityManager.addEntity("player");
@@ -34,24 +37,15 @@ ScenePlay::ScenePlay(Engine* engine)
 	torch->addComponent<CLight>(360, 250);
 	
 	auto torch2 = m_entityManager.addEntity("torch");
-	torch2->addComponent<CTransform>(Vec2(400, 300), Vec2(0, 0));
+	torch2->addComponent<CTransform>(Vec2(400, 400), Vec2(0, 0));
 	torch2->addComponent<CBoundingBox>(Vec2(8, 8));
 	torch2->addComponent<CLight>(360, 250);
 
-	//set up wall
-
-	auto wall = m_entityManager.addEntity("wall");
-
-	wall->addComponent<CTransform>(Vec2(150, 150), Vec2(0, 0)); 
-	auto& ct = wall->getComponent<CTransform>(); 
-
-	wall->addComponent<CBoundingBox>(Vec2(128, 128));
-	auto& cb = wall->getComponent<CBoundingBox>();
-
-	wall->addComponent<CVertex>(Vec2(150, 150), Vec2(128, 128));
+	readMap();
 
 	
 
+	
 
 	/*auto& window = m_game->window();
 	auto winSize = window.getSize();
@@ -66,6 +60,7 @@ void ScenePlay::update()
 	{
 		m_entityManager.update();
 		sMovement();
+		sCollision();
 		sRayCasting();
 	}
 
@@ -116,7 +111,7 @@ void ScenePlay::sRender()
 			rect.setSize(sf::Vector2f(bb.size.x, bb.size.y));
 			rect.setPosition(ct.pos.x, ct.pos.y);
 			rect.setOrigin(bb.size.x / 2, bb.size.y / 2);
-			rect.setFillColor((e == player) ? sf::Color::White : sf::Color::Transparent);
+			rect.setFillColor((e == player) ? sf::Color::White : m_transParentBox ? sf::Color(0, 255, 0, 0) : sf::Color(0, 255, 0, 255));
 
 			window.draw(rect);
 		}
@@ -194,6 +189,10 @@ void ScenePlay::sDoAction(const Action& action)
 		{
 			m_drawMousePos = !m_drawMousePos;
 		}
+		else if (action.name() == "TRANSPARENT_BOX")
+		{
+			m_transParentBox = !m_transParentBox;
+		}
 	}
 }
 
@@ -203,7 +202,7 @@ void ScenePlay::sMovement()
 
 	auto& input = player->getComponent<CInput>();
 	auto& playerTransform = player->getComponent<CTransform>();
-
+	playerTransform.prevPos = playerTransform.pos;
 
 	// Player movement
 
@@ -216,7 +215,7 @@ void ScenePlay::sMovement()
 		playerVelocity.y += 5;
 	}
 
-	if (input.right)
+	else if (input.right)
 	{
 		playerVelocity.x += 5;
 	}
@@ -238,6 +237,46 @@ void ScenePlay::onEnd()
 {
 }
 
+void ScenePlay::sCollision()
+{
+	auto& playerTransform = player->getComponent<CTransform>();
+	for (auto& e : m_entityManager.getEntities("wall"))
+	{
+
+		auto overLap = phy.getOverlap(player, e);
+		auto prevOverLap = phy.getPrevOverlap(player, e);
+		auto ePos = e->getComponent<CTransform>().pos;
+		/*std::cout << overLap.x << " " << overLap.y << std::endl;
+		std::cout << prevOverLap.x << " p " << prevOverLap.y << std::endl;*/
+
+		if (overLap.x > 0 && overLap.y > 0)
+		{
+			if (prevOverLap.y > 0 && playerTransform.pos.x > ePos.x)
+			{
+				playerTransform.pos += Vec2(overLap.x, 0);
+			}
+			else if (prevOverLap.y > 0 && playerTransform.pos.x < ePos.x)
+			{
+				playerTransform.pos += Vec2(-overLap.x, 0);
+			}
+
+			if (prevOverLap.x > 0 && playerTransform.pos.y < ePos.y)
+			{
+				playerTransform.pos += Vec2(0, -overLap.y);
+			}
+			else if (prevOverLap.x > 0 && playerTransform.pos.y > ePos.y)
+			{
+				playerTransform.pos += Vec2(0, overLap.y);
+			}
+			playerTransform.prevPos = playerTransform.pos;
+			
+			break;
+		}
+
+	}
+	   
+}
+
 void ScenePlay::sRayCasting()
 {
 	auto& window = m_game->window();
@@ -250,8 +289,8 @@ void ScenePlay::sRayCasting()
 		pl.ray.clear();
 		pl.angle.clear();
 		phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("wall"), e, window, m_pos, pl.scope, pl.length);
-		phy.getAllDirection(pl.angle, 360, e, m_pos, pl.scope, pl.length);
-
+		phy.getAllDirection(pl.angle, 180, e, m_pos, pl.scope, pl.length);
+		if (pl.angle.empty()) break;
 		phy.IntersectRay(pl.angle, pPos, m_entityManager.getEntities("wall"));
 		
 		//std::cout << phy.vectorToDegree(pPos, m_pos) << std::endl; 
@@ -276,11 +315,52 @@ void ScenePlay::sRayCasting()
 
 		// add the ray
 		phy.addRay(pl.ray, pl.angle, pPos);
-
 		//std::cout << ray.size() << std::endl;
 	}
 	
 
+}
+
+void ScenePlay::readMap()
+{
+	std::ifstream in("res/world/level_1.json");
+
+	Json::Value val;
+	Json::Reader reader;
+
+	reader.parse(in, val);
+
+	int w = val["width"].asInt();
+	int h = val["height"].asInt();
+	int s = val["size"].asInt();
+
+	auto& TILE = val["data"];
+	
+	int col = 0, row = 0, i = 0;
+	while (row < h)
+	{
+		if (TILE[i].asInt() != 0)
+		{
+			auto wall = m_entityManager.addEntity("wall");
+			
+			Vec2 pos((col * s) + s / 2, (row * s) + s/2);
+
+			wall->addComponent<CTransform>(pos, Vec2(0, 0)); 
+			auto& ct = wall->getComponent<CTransform>();
+
+			wall->addComponent<CBoundingBox>(Vec2(s, s));
+			auto& cb = wall->getComponent<CBoundingBox>();
+
+			wall->addComponent<CVertex>(pos, Vec2(s, s));
+		}
+		col++;
+		i++;
+		if (col >= w)
+		{
+			col = 0;
+			row++;
+		}
+	}
 }
 
 

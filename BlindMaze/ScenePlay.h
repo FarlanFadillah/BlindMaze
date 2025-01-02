@@ -16,9 +16,11 @@ private:
 	std::vector<sf::Vertex> angle;*/
 
 	bool m_drawEntities		= true;
-	bool m_drawMousePos		= true;
+	bool m_drawMousePos		= false;
 	bool m_drawLight		= true;
 	bool m_drawRay			= false;
+
+	bool m_transParentBox	= true;
 
 	sf::Vector2f m_pos;
 
@@ -28,9 +30,11 @@ private:
 	void sDoAction(const Action& action)	override;
 	void sMovement();
 	void onEnd()							override; 
+	void sCollision();
 
 	void sRayCasting();
-	void sIntersectRay(std::vector<sf::Vertex>& angle, const Vec2& pPos);
+	void readMap();
+	
 public:
 
 	ScenePlay();

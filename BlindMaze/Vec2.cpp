@@ -88,6 +88,7 @@ void Vec2::operator/=(const float val)
 }
 
 
+
 float Vec2::dist(const Vec2& rhs) const
 {
 	return sqrt(pow(x - rhs.x, 2) + pow(y - rhs.y, 2));

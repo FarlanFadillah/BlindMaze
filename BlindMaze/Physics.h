@@ -4,21 +4,21 @@
 #include <SFML/Graphics.hpp>
 #include "Entity.hpp"
 
-#define PI 3.14159265
+constexpr auto PI = 3.14159265;
 class Physics {
 public:
     // Checking intersetion between lines
-    void intersect(Vec2 a, sf::Vertex& bo, Vec2 c, Vec2 d)
+    void intersect(const sf::Vector2f& a, sf::Vertex& bo, const sf::Vector2f& c, const sf::Vector2f& d)
     {
-        Vec2 b(bo.position.x, bo.position.y);
-        Vec2 r = b - a, s = d - c;
+        sf::Vector2f b(bo.position.x, bo.position.y);
+        sf::Vector2f r(b - a), s(d - c);
         float rXs = cross(r, s);
-        Vec2 cma = c - a;
-        float amcXs = cross(cma, s);
-        float amcXr = cross(cma, r);
+        sf::Vector2f cma(c - a);
+        float amcXs(cross(cma, s));
+        float amcXr(cross(cma, r));
 
-        float t = amcXs / rXs;
-        float u = amcXr / rXs;
+        float t(amcXs / rXs);
+        float u(amcXr / rXs);
 
         //std::cout << c.x << "  " << c.y << "\n";
         //std::cout << d.x << "  " << d.y << "\n";
@@ -30,9 +30,8 @@ public:
         }
     }
 
-    void lightEffect(std::vector<sf::Vertex>& vectors, const std::shared_ptr<Entity> player, const float distance)
+    void lightEffect(std::vector<sf::Vertex>& vectors, const Vec2& cp, const float distance)
     {
-        auto& cp = player->getComponent<CTransform>().pos;
         sf::Vector2f ls(cp.x, cp.y);
         for (auto& v : vectors)
         {
@@ -41,20 +40,19 @@ public:
     }
 
     // 2d cross product
-    float cross(const Vec2& rhs1, const Vec2& rhs2)
+    float cross(const sf::Vector2f& rhs1, const sf::Vector2f& rhs2)
     {
         return (rhs1.x * rhs2.y) - (rhs1.y * rhs2.x);
     }
 
-    std::vector<sf::Vertex> getAllDirection(std::vector<sf::Vertex>& vectors, const int& vertices, const std::shared_ptr<Entity>& player, const sf::Vector2f& m_pos, const float scope, const float length)
+    std::vector<sf::Vertex> getAllDirection(std::vector<sf::Vertex>& vectors, const int vertices, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
     {
         int step = 360 / vertices;
-        auto& cp = player->getComponent<CTransform>().pos;
         for (int i = 0; i < vertices; i++)
         {
             float velx = (float)cos(i * step * PI / 180);
             float vely = (float)sin(i * step * PI / 180);
-            auto vertex = sf::Vertex(sf::Vector2f((velx * length) + cp.x, (vely * length) + cp.y), sf::Color::Black);
+            sf::Vertex vertex(sf::Vector2f((velx * length) + cp.x, (vely * length) + cp.y), sf::Color::Black); 
             //std::cout << vertex.position.x << " " << vertex.position.y << " va pos\n";
             validateVector(vectors, vertex, m_pos, cp, scope);
         }
@@ -62,10 +60,8 @@ public:
         return vectors;
     }
 
-    std::vector<sf::Vertex> getRectanglePoints( std::vector<sf::Vertex>& vectors,std::vector<std::shared_ptr<Entity>>& boxes, const std::shared_ptr<Entity> player, sf::RenderWindow& window, const sf::Vector2f& m_pos, const float scope, const float length)
+    std::vector<sf::Vertex> getRectanglePoints( std::vector<sf::Vertex>& vectors,std::vector<std::shared_ptr<Entity>>& boxes, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
     {
-        auto winPos = window.getSize();
-        auto& cp = player->getComponent<CTransform>().pos;
         /*validateVector(vectors,
             sf::Vertex(sf::Vector2f(0, 0), sf::Color::Black),
             m_pos, cp, scope / 2);
@@ -83,12 +79,12 @@ public:
             m_pos, cp, scope / 2);*/
         for (auto& b : boxes)
         {
-            for (auto& temp : b->getComponent<CVertex>().vertex)
+            for (const auto& temp : b->getComponent<CVertex>().vertex)
             {
                 if (outOfRange(length, temp.position, cp)) continue;
                 Vec2 normal(temp.position.x, temp.position.y);
                 normal.normalize();
-                auto pos = sf::Vector2f(normal.x + cp.x, normal.y + cp.x);
+                sf::Vector2f pos(normal.x + cp.x, normal.y + cp.x);
 
                 /*validateVector(vectors,
                     sf::Vertex(pos, sf::Color(i*5, i*5, i*5)), 
@@ -96,7 +92,7 @@ public:
                 float angle = vectorToDegree(sf::Vector2f(cp.x, cp.y), temp.position);
 
                 //std::cout << cos(toRadian(angle+30)) + cp.x << " " << sin(toRadian(angle+30)) + cp.y << "\n";
-                float off = 0.001f;
+                float off(0.001f);
                 validateVector(vectors,
                     sf::Vertex(sf::Vector2f(cos(toRadian(angle) + off) * length + cp.x, sin(toRadian(angle) + off) * length + cp.y), sf::Color::Black),
                     m_pos, cp, scope);
@@ -158,7 +154,7 @@ public:
     }
 
 
-    void sortVector(std::vector<sf::Vertex>& vectors, Vec2 cp, const sf::Vector2f& m_pos, float scope)
+    void sortVector(std::vector<sf::Vertex>& vectors, const Vec2& cp, const sf::Vector2f& m_pos, const float scope)
     {
         auto angle = mesureAngle(vectors, cp, m_pos, scope);
         std::vector<sf::Vertex> vecTemp = vectors;
@@ -170,7 +166,7 @@ public:
     }
 
 
-    std::vector<std::pair<int, float>> mesureAngle(std::vector<sf::Vertex>& vectors, Vec2 cp, const sf::Vector2f& m_pos, const float scope)
+    std::vector<std::pair<int, float>> mesureAngle(std::vector<sf::Vertex>& vectors, const Vec2& cp, const sf::Vector2f& m_pos, const float scope)
     {
         float mPos = vectorToDegree(sf::Vector2f(cp.x, cp.y), sf::Vector2f(m_pos.x, m_pos.y));
         std::vector<std::pair<int, float>> result;
@@ -243,7 +239,7 @@ public:
         return angleL;
     }
 
-    std::vector<std::pair<int, float>> sortMap(std::vector<std::pair<int, float>>& myMap)
+    std::vector<std::pair<int, float>>& sortMap(std::vector<std::pair<int, float>>& myMap)
     {
         // Copy the elements to a vector
         std::vector<std::pair<int, float>> vec(myMap.begin(), myMap.end());
@@ -274,9 +270,7 @@ public:
         );
     }
 
-    
-
-    void IntersectRay(std::vector<sf::Vertex>& angle, const Vec2& pPos, const std::vector<std::shared_ptr<Entity>>& entities)
+    void IntersectRay(std::vector<sf::Vertex>& angle, const sf::Vector2f& pPos, const std::vector<std::shared_ptr<Entity>>& entities)
     {
         for (auto& e : angle)
         {
@@ -284,21 +278,10 @@ public:
             for (const auto& wall : entities)
             {
                 const auto& f = wall->getComponent<CVertex>().vertex;
-                intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f.at(0).position.x, f.at(0).position.y),
-                    Vec2(f.at(1).position.x, f.at(1).position.y));
-
-                intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f.at(1).position.x, f.at(1).position.y),
-                    Vec2(f.at(2).position.x, f.at(2).position.y));
-
-                intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f.at(2).position.x, f.at(2).position.y),
-                    Vec2(f.at(3).position.x, f.at(3).position.y));
-
-                intersect(Vec2(pPos.x, pPos.y), e,
-                    Vec2(f.at(3).position.x, f.at(3).position.y),
-                    Vec2(f.at(0).position.x, f.at(0).position.y));
+                intersect(pPos, e, f.at(0).position,f.at(1).position);
+                intersect(pPos, e, f.at(1).position, f.at(2).position);
+                intersect(pPos, e, f.at(2).position, f.at(3).position);
+                intersect(pPos, e, f.at(3).position, f.at(0).position);
 
             }
         }
@@ -306,10 +289,14 @@ public:
 
     void addLight(std::vector<sf::Vertex*>& light, const std::vector<sf::Vertex>& angle, const Vec2& pPos, int off)
     {
-        light.clear();
+        for (auto* vertices : light) 
+        {
+            delete[] vertices;
+        }
+        light.clear();  // Clear the vector to avoid dangling pointers
         for (int i = 0; i < angle.size() - off; i++)
         {
-            if (i + 1 >= angle.size())
+            if (static_cast<unsigned long long>(i) + 1 >= angle.size())
             {
                 light.push_back(
                     new sf::Vertex[3]{
@@ -329,10 +316,27 @@ public:
                 );
         }
     }
+    void addLight(sf::VertexArray& light, const std::vector<sf::Vertex>& angle, const Vec2& pPos, int off)
+    {
+        light.clear();
+        light = sf::VertexArray(sf::TriangleFan, angle.size() + 1 + off);
+        light[0] = sf::Vertex(sf::Vector2f(pPos.x, pPos.y), sf::Color::White);
+
+        for (int i = 1; i <= angle.size(); i++)
+        {
+            light[i] = angle[i - 1];
+        }
+
+        if(off > 0 ) light[angle.size() + 1] = light[1];
+    }
 
     void addRay(std::vector<sf::Vertex*>& ray, const std::vector<sf::Vertex>& angle, const Vec2& pPos)
     {
-        for (auto e : angle)
+        for (auto* vertices : ray) {
+            delete[] vertices;
+        }
+        ray.clear();  // Clear the vector to avoid dangling pointers
+        for (const auto& e : angle)
         {
             ray.push_back(
                 new sf::Vertex[2]{
@@ -387,5 +391,21 @@ public:
         }
         return Vec2(0, 0);
     }
+
+    const Vec2& getRectGrid(const Vec2& pos, const int rectSize, bool gridToVector)
+    {
+        int halfRect = rectSize / 2;
+        if (gridToVector)
+        {
+            auto result = Vec2((pos.x * rectSize) + halfRect, (pos.y * rectSize) + halfRect);
+            //std::cout << result.x << " " << result.y << std::endl;
+            //std::cout << pos.x << " " << pos.y << std::endl;
+            return result;
+        }
+
+        return Vec2((int)(pos.x / rectSize), (int)(pos.y / rectSize));
+    }
+
+   
 };
 

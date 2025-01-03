@@ -78,6 +78,12 @@ void Engine::sUserInput()
 		{
 			currentScene()->sDoAction(Action(sf::Vector2f(event.mouseMove.x, event.mouseMove.y)));
 		}
+		else if (event.type == sf::Event::MouseButtonPressed || event.type == sf::Event::MouseButtonReleased)
+		{
+			std::string actionType =
+				(event.type == sf::Event::MouseButtonPressed) ? "START" : "END";
+			currentScene()->sDoAction(Action(sf::Vector2f(event.mouseButton.x, event.mouseButton.y), actionType, "MOUSE_CLICKED"));
+		}
 
 	}
 }

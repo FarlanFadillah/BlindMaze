@@ -10,6 +10,13 @@ Action::Action(const std::string& _type, const std::string& _name)
 {
 }
 
+Action::Action(const sf::Vector2f& pos, const std::string& _type, const std::string& _name)
+	:m_name(_name)
+	, m_type(_type)
+	,m_pos(pos)
+{
+}
+
 Action::Action(const sf::Vector2f& pos)
 	:m_pos(pos)
 {

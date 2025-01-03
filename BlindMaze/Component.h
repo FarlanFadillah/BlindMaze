@@ -60,16 +60,29 @@ class CVertex : public Component
 {
 public:
 	std::vector<sf::Vertex> vertex;
-
+	Vec2 m_size;
 	CVertex(){}
-	CVertex(const Vec2& pos, const Vec2& size) {
+	CVertex(const Vec2& pos, const Vec2& size) 
+		:m_size(size)
+	{
 
-		float ax = pos.x - size.x/2;
-		float ay = pos.y - size.y/2;
+		float ax = pos.x - m_size.x/2;
+		float ay = pos.y - m_size.y/2;
 		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay), sf::Color::Green));
-		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay + size.y), sf::Color::Green));
-		vertex.push_back(sf::Vertex(sf::Vector2f(ax + size.x, ay + size.y), sf::Color::Green));
-		vertex.push_back(sf::Vertex(sf::Vector2f(ax + size.x, ay), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay + m_size.y), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax + m_size.x, ay + m_size.y), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax + m_size.x, ay), sf::Color::Green));
+	}
+
+	void update(const Vec2& pos)
+	{
+		vertex.clear();
+		float ax = pos.x - m_size.x / 2;
+		float ay = pos.y - m_size.y / 2;
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax, ay + m_size.y), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax + m_size.x, ay + m_size.y), sf::Color::Green));
+		vertex.push_back(sf::Vertex(sf::Vector2f(ax + m_size.x, ay), sf::Color::Green));
 	}
 };
 
@@ -81,13 +94,25 @@ public:
 	float length = 250;
 
 	std::vector<sf::Vertex*> ray;
-	std::vector<sf::Vertex*> light;
 	std::vector<sf::Vertex> angle;
+	sf::VertexArray light;
 	CLight(){}
 	CLight(const float _scope, const float _length)
 		:scope(_scope),
 		length(_length)
 	{
 
+	}
+};
+
+class CItem : public Component
+{
+public:
+	size_t torch = 0;
+	size_t key = 0;
+	CItem(){}
+	CItem(const size_t _torch)
+		:torch(_torch)
+	{
 	}
 };

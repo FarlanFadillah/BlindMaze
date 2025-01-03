@@ -21,20 +21,20 @@ ScenePlay::ScenePlay(Engine* engine)
 	registerAction(sf::Keyboard::F4, "DRAW_MOUSEPOS");
 	registerAction(sf::Keyboard::F5, "TRANSPARENT_BOX");
 	registerAction(sf::Keyboard::F6, "COLLISION");
+	registerAction(sf::Keyboard::F, "PLAYER_LIGHT");
 
 
 	player = m_entityManager.addEntity("player");
 
-	player->addComponent<CTransform>(Vec2(100, 300), Vec2(5, 5));
+	player->addComponent<CTransform>(Vec2(300, 300), Vec2(5, 5));
 	player->addComponent<CBoundingBox>(Vec2(16, 16));
-	player->addComponent<CVertex>(Vec2(100, 100), Vec2(16, 16));
+	player->addComponent<CVertex>(Vec2(300, 300), Vec2(16, 16));
 	player->addComponent<CInput>();
 	player->addComponent<CLight>(120, 250);
-
+	m_entityManager.addEntity(player, "vertex_object");
 	readMap();
-
+	//testMap();
 	
-
 	
 
 	/*auto& window = m_game->window();
@@ -43,6 +43,8 @@ ScenePlay::ScenePlay(Engine* engine)
 	auto winFrame = m_entityManager.addEntity("wall");
 	winFrame->addComponent<CVertex>(Vec2(winSize.x / 2, winSize.y / 2), Vec2(winSize.x, winSize.y));*/
 }
+
+
 
 void ScenePlay::update()
 {
@@ -64,18 +66,13 @@ void ScenePlay::sRender()
 
 	//draw player light
 	auto& pl = player->getComponent<CLight>();
-	auto& ray = pl.ray;
-	auto light = pl.light;
-	if (m_drawLight)
+	if (m_drawLight && m_playerLight)
 	{
-		for (auto& l : light)
-		{
-			window.draw(l, 3, sf::Triangles);
-		}
+		window.draw(pl.light);
 	}
 	if (m_drawRay)
 	{
-		for (auto& e : ray)
+		for (auto& e : pl.ray)
 		{
 			window.draw(e, 2, sf::Lines);
 		}
@@ -87,19 +84,13 @@ void ScenePlay::sRender()
 		if (e->hasComponent<CLight>())
 		{
 			auto& pl = e->getComponent<CLight>();
-			auto& ray = pl.ray;
-			auto light = pl.light;
 			if (m_drawLight)
 			{
-				for (auto& l : light)
-				{
-					window.draw(l, 3, sf::Triangles);
-				}
+				window.draw(pl.light);
 			}
 			if (m_drawRay)
 			{
-				//window.draw(visibilityPolygon);
-				for (auto& e : ray)
+				for (auto& e : pl.ray)
 				{
 					window.draw(e, 2, sf::Lines);
 				}
@@ -161,6 +152,16 @@ void ScenePlay::sDoAction(const Action& action)
 		{
 			m_pos = action.pos();
 		}
+		else if (action.name() == "PLAYER_LIGHT")
+		{
+			m_playerLight = !m_playerLight;
+		}
+		else if (action.name() == "MOUSE_CLICKED")
+		{
+			//std::cout << action.pos().x << " " << action.pos().y << std::endl;
+			auto& grid = phy.getRectGrid(Vec2(action.pos().x, action.pos().y), 32, false);
+			spawnTorch(grid.x, grid.y, 32, false);
+		}
 	}
 	else if (action.type() == "END")
 	{
@@ -203,6 +204,11 @@ void ScenePlay::sDoAction(const Action& action)
 		}else if (action.name() == "COLLISION")
 		{
 			m_collision = !m_collision;
+		}
+		else if (action.name() == "MOUSE_CLICKED")
+		{
+			//std::cout << action.pos().x << " " << action.pos().y << std::endl;
+
 		}
 	}
 }
@@ -290,10 +296,44 @@ void ScenePlay::sCollision()
 
 void ScenePlay::sRayCasting()
 {
-	setRay(player);
+	setRayForPlayer(player);
+	auto& pPos = player->getComponent<CTransform>();
+	auto& pVx = player->getComponent<CVertex>();
+	for (auto& e : m_entityManager.getEntities("torch"))
+	{
+		auto& ePos = e->getComponent<CTransform>();
+		auto& eL = e->getComponent<CLight>();
+		if (pPos.pos.dist(ePos.pos) <= eL.length)
+		{
+			pVx.update(pPos.pos);
+			setRayForTorch(e);
+		}
+	}
 }
 
-void ScenePlay::setRay(std::shared_ptr<Entity> e)
+void ScenePlay::updateRay(std::shared_ptr<Entity> e)
+{
+
+	//TODO suck
+	auto& window = m_game->window();
+	if (!e->hasComponent<CLight>()) return;
+	auto& pPos = e->getComponent<CTransform>().pos;
+	auto& pl = e->getComponent<CLight>();
+	pl.ray.clear();
+
+	if (pl.angle.empty()) return;
+	phy.IntersectRay( pl.angle, sf::Vector2f(pPos.x, pPos.y), m_entityManager.getEntities("wall"));
+
+	//sort all ray vector with scope
+	phy.sortVector(pl.angle, pPos, m_pos, pl.scope);
+
+	//add the ligth
+	phy.addLight(pl.light, pl.angle, pPos, 0);
+
+	if (m_drawRay) phy.addRay(pl.ray, pl.angle, pPos);
+}
+
+void ScenePlay::setRayForPlayer(std::shared_ptr<Entity> e)
 {
 	auto& window = m_game->window();
 	if (!e->hasComponent<CLight>()) return;
@@ -301,30 +341,48 @@ void ScenePlay::setRay(std::shared_ptr<Entity> e)
 	auto& pl = e->getComponent<CLight>();
 	pl.ray.clear();
 	pl.angle.clear();
-	phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("wall"), e, window, m_pos, pl.scope, pl.length);
-	phy.getAllDirection(pl.angle, 90, e, m_pos, pl.scope, pl.length);
+	phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("wall"), pPos, m_pos, pl.scope, pl.length);
+	phy.getAllDirection(pl.angle, 36, pPos, m_pos, pl.scope, pl.length);
+
 	if (pl.angle.empty()) return;
-	phy.IntersectRay(pl.angle, pPos, m_entityManager.getEntities("wall"));
-
-	//std::cout << phy.vectorToDegree(pPos, m_pos) << std::endl; 
-
+	phy.IntersectRay(pl.angle, sf::Vector2f(pPos.x, pPos.y), m_entityManager.getEntities("wall"));
 
 	//sort all ray vector with scope
 	phy.sortVector(pl.angle, pPos, m_pos, pl.scope);
 
 	//adding light effect
-	phy.lightEffect(pl.angle, e, pl.length);
-	//std::cout << angle.size() << std::endl;
+	phy.lightEffect(pl.angle, pPos, pl.length);
 
 	//add the ligth
-	if (e->tag() == "player")
-	{
-		phy.addLight(pl.light, pl.angle, pPos, 1);
-	}
-	else
-	{
-		phy.addLight(pl.light, pl.angle, pPos, 0);
-	}
+	//phy.addLight(pl.light, pl.angle, pPos, 1);
+	phy.addLight(pl.light, pl.angle, pPos, 0);
+
+	if (m_drawRay) phy.addRay(pl.ray, pl.angle, pPos);
+}
+
+void ScenePlay::setRayForTorch(std::shared_ptr<Entity> e)
+{
+	auto& window = m_game->window();
+	if (!e->hasComponent<CLight>()) return;
+	auto& pPos = e->getComponent<CTransform>().pos;
+	auto& pl = e->getComponent<CLight>();
+	pl.ray.clear();
+	pl.angle.clear();
+	phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("vertex_object"), pPos, m_pos, pl.scope, pl.length);
+
+	if (pl.angle.empty()) return;
+	phy.IntersectRay(pl.angle, sf::Vector2f(pPos.x, pPos.y), m_entityManager.getEntities("vertex_object"));
+
+	//sort all ray vector with scope
+	phy.sortVector(pl.angle, pPos, m_pos, pl.scope);
+
+	//adding light effect
+	phy.lightEffect(pl.angle, pPos, pl.length);
+
+	//add the ligth
+	phy.addLight(pl.light, pl.angle, pPos, 1);
+
+	if (m_drawRay) phy.addRay(pl.ray, pl.angle, pPos);
 }
 
 void ScenePlay::readMap()
@@ -358,13 +416,12 @@ void ScenePlay::readMap()
 			auto& cb = wall->getComponent<CBoundingBox>();
 
 			wall->addComponent<CVertex>(pos, Vec2(s, s));
+
+			m_entityManager.addEntity(wall, "vertex_object");
 		}
 		else if(TILE[i].asInt() == 2)
 		{
-			auto torch = m_entityManager.addEntity("torch");
-			Vec2 pos((col * s) + s / 2, (row * s) + s / 2);
-			torch->addComponent<CTransform>(pos, Vec2(0, 0));
-			torch->addComponent<CLight>(360, 250);
+			spawnTorch(col, row, s, true);
 		}
 		col++;
 		i++;
@@ -378,8 +435,43 @@ void ScenePlay::readMap()
 
 	for (auto& e : m_entityManager.getEntities("torch"))
 	{
-		setRay(e);
+		setRayForTorch(e);
 	}
+
+	in.close();
 }
+
+void ScenePlay::testMap()
+{
+
+	auto torch2 = m_entityManager.addEntity("torch");
+	torch2->addComponent<CTransform>(Vec2(400, 300), Vec2(0, 0));
+	torch2->addComponent<CBoundingBox>(Vec2(8, 8));
+	torch2->addComponent<CLight>(360, 250);
+
+	auto wall = m_entityManager.addEntity("wall");
+	wall->addComponent<CTransform>(Vec2(300, 150), Vec2(0, 0));
+	auto& ct = wall->getComponent<CTransform>();
+	wall->addComponent<CBoundingBox>(Vec2(16, 16));
+	auto& cb = wall->getComponent<CBoundingBox>();
+	wall->addComponent<CVertex>(Vec2(300, 150), Vec2(16, 16));
+
+	m_entityManager.addEntity(wall, "vertex_object");
+}
+
+void ScenePlay::spawnTorch(const int col, const int row, const int s, const bool init)
+{
+	Vec2 pos((col * s) + s / 2, (row * s) + s / 2);
+	//std::cout << col << " " << row << " size: " << s << std::endl;
+	auto torch = m_entityManager.addEntity("torch");
+	torch->addComponent<CTransform>(pos, Vec2(0, 0));
+	torch->addComponent<CLight>(360, 250);
+
+	if(!init) setRayForTorch(torch);
+}
+
+
+
+
 
 

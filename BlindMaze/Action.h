@@ -11,6 +11,7 @@ public:
 
 	Action();
 	Action(const std::string & _type, const std::string & _name);
+	Action(const sf::Vector2f& pos, const std::string & _type, const std::string & _name);
 	Action(const sf::Vector2f& pos);
 
 	const std::string& name() const;

@@ -31,18 +31,7 @@ ScenePlay::ScenePlay(Engine* engine)
 	player->addComponent<CInput>();
 	player->addComponent<CLight>(120, 250);
 
-
-	auto torch = m_entityManager.addEntity("torch");
-	torch->addComponent<CTransform>(Vec2(400, 100), Vec2(0, 0));
-	torch->addComponent<CBoundingBox>(Vec2(8, 8));
-	torch->addComponent<CLight>(360, 250);
-	
-	auto torch2 = m_entityManager.addEntity("torch");
-	torch2->addComponent<CTransform>(Vec2(400, 400), Vec2(0, 0));
-	torch2->addComponent<CBoundingBox>(Vec2(8, 8));
-	torch2->addComponent<CLight>(360, 250);
-
-	///readMap();
+	readMap();
 
 	
 
@@ -73,9 +62,27 @@ void ScenePlay::sRender()
 	auto& window = m_game->window();
 	window.clear(sf::Color::Black);
 
-	//draw all entities
+	//draw player light
+	auto& pl = player->getComponent<CLight>();
+	auto& ray = pl.ray;
+	auto light = pl.light;
+	if (m_drawLight)
+	{
+		for (auto& l : light)
+		{
+			window.draw(l, 3, sf::Triangles);
+		}
+	}
+	if (m_drawRay)
+	{
+		for (auto& e : ray)
+		{
+			window.draw(e, 2, sf::Lines);
+		}
+	}
 
-	for (auto& e : m_entityManager.getEntities())
+	//draw all entities light
+	for (auto& e : m_entityManager.getEntities("torch"))
 	{
 		if (e->hasComponent<CLight>())
 		{
@@ -99,8 +106,8 @@ void ScenePlay::sRender()
 			}
 		}
 	}
-	
 
+	//draw all entities
 	if (m_drawEntities)
 	{
 		for (auto& e : m_entityManager.getEntities())
@@ -283,46 +290,41 @@ void ScenePlay::sCollision()
 
 void ScenePlay::sRayCasting()
 {
+	setRay(player);
+}
+
+void ScenePlay::setRay(std::shared_ptr<Entity> e)
+{
 	auto& window = m_game->window();
-	int i = 0;
-	for (auto& e : m_entityManager.getEntities())
+	if (!e->hasComponent<CLight>()) return;
+	auto& pPos = e->getComponent<CTransform>().pos;
+	auto& pl = e->getComponent<CLight>();
+	pl.ray.clear();
+	pl.angle.clear();
+	phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("wall"), e, window, m_pos, pl.scope, pl.length);
+	phy.getAllDirection(pl.angle, 90, e, m_pos, pl.scope, pl.length);
+	if (pl.angle.empty()) return;
+	phy.IntersectRay(pl.angle, pPos, m_entityManager.getEntities("wall"));
+
+	//std::cout << phy.vectorToDegree(pPos, m_pos) << std::endl; 
+
+
+	//sort all ray vector with scope
+	phy.sortVector(pl.angle, pPos, m_pos, pl.scope);
+
+	//adding light effect
+	phy.lightEffect(pl.angle, e, pl.length);
+	//std::cout << angle.size() << std::endl;
+
+	//add the ligth
+	if (e->tag() == "player")
 	{
-		if (!e->hasComponent<CLight>()) continue;
-		auto& pPos = e->getComponent<CTransform>().pos;
-		auto& pl = e->getComponent<CLight>();
-		pl.ray.clear();
-		pl.angle.clear();
-		phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("wall"), e, window, m_pos, pl.scope, pl.length);
-		phy.getAllDirection(pl.angle, 180, e, m_pos, pl.scope, pl.length);
-		if (pl.angle.empty()) break;
-		phy.IntersectRay(pl.angle, pPos, m_entityManager.getEntities("wall"));
-		
-		//std::cout << phy.vectorToDegree(pPos, m_pos) << std::endl; 
-		 
-		
-		//sort all ray vector with scope
-		phy.sortVector(pl.angle, pPos, m_pos, pl.scope);
-
-		//adding light effect
-		phy.lightEffect(pl.angle, e, pl.length);
-		//std::cout << angle.size() << std::endl;
-
-		//add the ligth
-		if (e->tag() == "player")
-		{
-			phy.addLight(pl.light, pl.angle, pPos, 1);
-		}
-		else
-		{
-			phy.addLight(pl.light, pl.angle, pPos, 0);
-		}
-
-		// add the ray
-		phy.addRay(pl.ray, pl.angle, pPos);
-		//std::cout << ray.size() << std::endl;
+		phy.addLight(pl.light, pl.angle, pPos, 1);
 	}
-	
-
+	else
+	{
+		phy.addLight(pl.light, pl.angle, pPos, 0);
+	}
 }
 
 void ScenePlay::readMap()
@@ -343,7 +345,7 @@ void ScenePlay::readMap()
 	int col = 0, row = 0, i = 0;
 	while (row < h)
 	{
-		if (TILE[i].asInt() != 0)
+		if (TILE[i].asInt() == 1)
 		{
 			auto wall = m_entityManager.addEntity("wall");
 			
@@ -357,6 +359,13 @@ void ScenePlay::readMap()
 
 			wall->addComponent<CVertex>(pos, Vec2(s, s));
 		}
+		else if(TILE[i].asInt() == 2)
+		{
+			auto torch = m_entityManager.addEntity("torch");
+			Vec2 pos((col * s) + s / 2, (row * s) + s / 2);
+			torch->addComponent<CTransform>(pos, Vec2(0, 0));
+			torch->addComponent<CLight>(360, 250);
+		}
 		col++;
 		i++;
 		if (col >= w)
@@ -364,6 +373,12 @@ void ScenePlay::readMap()
 			col = 0;
 			row++;
 		}
+	}
+	m_entityManager.update();
+
+	for (auto& e : m_entityManager.getEntities("torch"))
+	{
+		setRay(e);
 	}
 }
 

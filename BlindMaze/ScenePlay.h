@@ -34,6 +34,7 @@ private:
 	void sCollision();
 
 	void sRayCasting();
+	void setRay(std::shared_ptr<Entity> e);
 	void readMap();
 	
 public:

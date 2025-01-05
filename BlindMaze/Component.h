@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include "Vec2.hpp"
 #include <SFML/Graphics.hpp>
 class Component
@@ -95,6 +96,7 @@ public:
 
 	std::vector<sf::Vertex*> ray;
 	std::vector<sf::Vertex> angle;
+	std::vector<CVertex> staticVec;
 	sf::VertexArray light;
 	CLight(){}
 	CLight(const float _scope, const float _length)
@@ -108,11 +110,18 @@ public:
 class CItem : public Component
 {
 public:
-	size_t torch = 0;
-	size_t key = 0;
+	std::map<std::string, int> items;
 	CItem(){}
-	CItem(const size_t _torch)
-		:torch(_torch)
+	CItem(const std::string& tag)
 	{
+		items[tag] = 0;
 	}
+};
+
+class CState : public Component
+{
+public:
+	bool m_drawAble = false;
+	bool m_canPassThrough = false;
+	CState(){ }
 };

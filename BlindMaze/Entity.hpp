@@ -1,7 +1,5 @@
 #pragma once
-
 #include "Component.h"
-
 #include <string>
 #include <tuple>
 
@@ -10,7 +8,9 @@ typedef std::tuple<
 	CTransform,
 	CBoundingBox,
 	CVertex,
-	CLight
+	CLight, 
+	CState,
+	CItem
 > ComponentTuple;
 
 class Entity

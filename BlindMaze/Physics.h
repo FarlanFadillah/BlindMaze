@@ -30,6 +30,30 @@ public:
         }
     }
 
+    bool isIntersect(const sf::Vector2f& a, sf::Vertex& bo, const sf::Vector2f& c, const sf::Vector2f& d)
+    {
+        sf::Vector2f b(bo.position.x, bo.position.y);
+        sf::Vector2f r(b - a), s(d - c);
+        float rXs = cross(r, s);
+        sf::Vector2f cma(c - a);
+        float amcXs(cross(cma, s));
+        float amcXr(cross(cma, r));
+
+        float t(amcXs / rXs);
+        float u(amcXr / rXs);
+
+        //std::cout << c.x << "  " << c.y << "\n";
+        //std::cout << d.x << "  " << d.y << "\n";
+
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
+        {
+            b = a + (r * t);
+            bo.position = sf::Vector2f(b.x, b.y);
+            return true;
+        }
+        return false;
+    }
+
     void lightEffect(std::vector<sf::Vertex>& vectors, const Vec2& cp, const float distance)
     {
         sf::Vector2f ls(cp.x, cp.y);
@@ -60,23 +84,9 @@ public:
         return vectors;
     }
 
-    std::vector<sf::Vertex> getRectanglePoints( std::vector<sf::Vertex>& vectors,std::vector<std::shared_ptr<Entity>>& boxes, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
+    void getRectanglePoints( std::vector<sf::Vertex>& vectors,std::vector<std::shared_ptr<Entity>>& boxes, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
     {
-        /*validateVector(vectors,
-            sf::Vertex(sf::Vector2f(0, 0), sf::Color::Black),
-            m_pos, cp, scope / 2);
-
-        validateVector(vectors,
-            sf::Vertex(sf::Vector2f(0, winPos.y), sf::Color::Black),
-            m_pos, cp, scope / 2);
-
-        validateVector(vectors,
-            sf::Vertex(sf::Vector2f(winPos.x, winPos.y), sf::Color::Black),
-            m_pos, cp, scope / 2);
-
-        validateVector(vectors,
-            sf::Vertex(sf::Vector2f(winPos.x, 0), sf::Color::Black),
-            m_pos, cp, scope / 2);*/
+       
         for (auto& b : boxes)
         {
             for (const auto& temp : b->getComponent<CVertex>().vertex)
@@ -102,7 +112,45 @@ public:
             }
 
         }
-        return vectors;
+    }
+
+    void getStaticRectanglePoints(std::vector<CVertex>& boxes, std::vector<std::shared_ptr<Entity>>& entities, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
+    {
+        for (auto& b : entities)
+        {
+            auto& bt = b->getComponent<CTransform>();
+            if (outOfRange(length, sf::Vector2f(bt.pos.x, bt.pos.y), cp)) continue;
+            boxes.push_back(b->getComponent<CVertex>());
+        }
+    }
+
+    void setStaticRectanglePoints(std::vector<sf::Vertex>& vectors, std::vector<CVertex>& boxes, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
+    {
+
+        for (auto& b : boxes)
+        {
+            for (const auto& temp : b.vertex)
+            {
+                if (outOfRange(length, temp.position, cp)) continue;
+                Vec2 normal(temp.position.x, temp.position.y);
+                normal.normalize();
+                sf::Vector2f pos(normal.x + cp.x, normal.y + cp.x);
+
+                /*validateVector(vectors,
+                    sf::Vertex(pos, sf::Color(i*5, i*5, i*5)),
+                    m_pos, cp, scope / 2);*/
+                float angle = vectorToDegree(sf::Vector2f(cp.x, cp.y), temp.position);
+
+                //std::cout << cos(toRadian(angle+30)) + cp.x << " " << sin(toRadian(angle+30)) + cp.y << "\n";
+                float off(0.001f);
+                validateVector(vectors,
+                    sf::Vertex(sf::Vector2f(cos(toRadian(angle) + off) * length + cp.x, sin(toRadian(angle) + off) * length + cp.y), sf::Color::Black),
+                    m_pos, cp, scope);
+                validateVector(vectors,
+                    sf::Vertex(sf::Vector2f(cos(toRadian(angle) - off) * length + cp.x, sin(toRadian(angle) - off) * length + cp.y), sf::Color::Black),
+                    m_pos, cp, scope);
+            }
+        }
     }
 
     bool outOfRange(float length, const sf::Vector2f& vec, const Vec2& cp)
@@ -287,6 +335,23 @@ public:
         }
     }
 
+    void IntersectStaticRay(std::vector<sf::Vertex>& angle, const sf::Vector2f& pPos, std::vector<CVertex>& boxes)
+    {
+        for (auto& e : angle)
+        {
+            //std::cout << e.position.x << " " << e.position.y << std::endl;
+            for (const auto& wall : boxes)
+            {
+                const auto& f = wall.vertex;
+                intersect(pPos, e, f.at(0).position, f.at(1).position);
+                intersect(pPos, e, f.at(1).position, f.at(2).position);
+                intersect(pPos, e, f.at(2).position, f.at(3).position);
+                intersect(pPos, e, f.at(3).position, f.at(0).position);
+
+            }
+        }
+    }
+
     void addLight(std::vector<sf::Vertex*>& light, const std::vector<sf::Vertex>& angle, const Vec2& pPos, int off)
     {
         for (auto* vertices : light) 
@@ -392,6 +457,18 @@ public:
         return Vec2(0, 0);
     }
 
+    bool isInside(const sf::Vector2f& pos, const std::shared_ptr<Entity> e)
+    {
+        auto& ePos = e->getComponent<CTransform>().pos;
+        auto& cb = e->getComponent<CBoundingBox>().size;
+
+        Vec2 rad(cb.x, cb.y);
+
+        float distX = fabs(pos.x - ePos.x);
+        float distY = fabs(pos.y - ePos.y);
+        return (distX < cb.x / 2 && distY < cb.y / 2);
+    }
+
     const Vec2& getRectGrid(const Vec2& pos, const int rectSize, bool gridToVector)
     {
         int halfRect = rectSize / 2;
@@ -404,6 +481,20 @@ public:
         }
 
         return Vec2((int)(pos.x / rectSize), (int)(pos.y / rectSize));
+    }
+
+    bool spotLight(std::vector<sf::Vertex>& angle, const sf::Vector2f& pPos, const std::shared_ptr<Entity> entities)
+    {
+        for (auto& e : angle)
+        {
+                const auto& f = entities->getComponent<CVertex>().vertex;
+                if (isIntersect(pPos, e, f.at(0).position, f.at(1).position) ||
+                    isIntersect(pPos, e, f.at(1).position, f.at(2).position) ||
+                    isIntersect(pPos, e, f.at(2).position, f.at(3).position) ||
+                    isIntersect(pPos, e, f.at(3).position, f.at(0).position)) return true;
+
+        }
+        return false;
     }
 
    

@@ -7,39 +7,51 @@ ScenePlay::ScenePlay()
 {
 }
 
-ScenePlay::ScenePlay(Engine* engine, const int _level)
+ScenePlay::ScenePlay(Engine* engine, const int _level, const std::string& config)
 	:Scene(engine),
 	level(_level)
 {
-
+	init(config);
 	registerAction(sf::Keyboard::A, "LEFT");
 	registerAction(sf::Keyboard::S, "DOWN");
 	registerAction(sf::Keyboard::D, "RIGHT");
 	registerAction(sf::Keyboard::W, "UP");
-	registerAction(sf::Keyboard::F1, "DRAW_LIGHT");
+	/*registerAction(sf::Keyboard::F1, "DRAW_LIGHT");
 	registerAction(sf::Keyboard::F2, "DRAW_RAY");
 	registerAction(sf::Keyboard::F3, "DRAW_ENTITIES");
 	registerAction(sf::Keyboard::F4, "DRAW_MOUSEPOS");
 	registerAction(sf::Keyboard::F5, "TRANSPARENT_BOX");
 	registerAction(sf::Keyboard::F6, "COLLISION");
-	registerAction(sf::Keyboard::F7, "NEXT_LEVEL");
+	registerAction(sf::Keyboard::F7, "NEXT_LEVEL");*/
 	registerAction(sf::Keyboard::F, "PLAYER_LIGHT");
 
 	ostrich_regular.loadFromFile("res/fonts/ostrich-regular.ttf");
 
 	initLevel("res/config/levels.ini");
-	readMap(levels.at(level));
+	imageToMap(levels.at(level));
 	
 	auto& window = m_game->window();
 	CameraView.setSize(window.getSize().x, window.getSize().y);
 	CameraView.setCenter(window.getSize().x / 2, window.getSize().y / 2);
 	window.setView(CameraView);
 
-	/*auto& window = m_game->window();
-	auto winSize = window.getSize();
+}
 
-	auto winFrame = m_entityManager.addEntity("wall");
-	winFrame->addComponent<CVertex>(Vec2(winSize.x / 2, winSize.y / 2), Vec2(winSize.x, winSize.y));*/
+void ScenePlay::init(const std::string& config)
+{
+	std::ifstream in(config);
+	Json::Value val;
+	Json::Reader read;
+	read.parse(in, val);
+	m_drawEntities = val["m_drawEntities"].asBool();
+	m_drawPlayer = val["m_drawPlayer"].asBool();
+	m_drawMousePos = val["m_drawMousePos"].asBool();
+	m_drawLight = val["m_drawLight"].asBool();
+	m_playerLight = val["m_playerLight"].asBool();
+	m_drawRay = val["m_drawRay"].asBool();
+	m_drawGui = val["m_drawGui"].asBool();
+	m_transParentBox = val["m_transParentBox"].asBool();
+	m_collision = val["m_collision"].asBool();
 }
 
 
@@ -228,7 +240,7 @@ void ScenePlay::sDoAction(const Action& action)
 		{
 			m_pos = action.pos();
 			m_wpos = windowToWorldPos(m_pos);
-			mouseMoved = true;
+			mouseMoved = true; 
 		}
 		else if (action.name() == "PLAYER_LIGHT")
 		{
@@ -368,11 +380,11 @@ void ScenePlay::objective()
 	{
 		if (level < levels.size() - 1)
 		{
-			m_game->changeScene("MAIN", std::make_shared<ScenePlay>(m_game, level + 1));
+			m_game->changeScene("MAIN", std::make_shared<ScenePlay>(m_game, level + 1, "res/config/default.json"));
 		}
 		else
 		{
-			m_game->changeScene("MAIN", std::make_shared<ScenePlay>(m_game, 0));
+			m_game->changeScene("MAIN", std::make_shared<ScenePlay>(m_game, 0, "res/config/default.json"));
 		}
 	}
 }
@@ -564,6 +576,61 @@ void ScenePlay::readMap(const std::string& level)
 	}
 
 	in.close();
+}
+
+void ScenePlay::imageToMap(const std::string& fileName)
+{
+
+	sf::Image img;
+	if (!img.loadFromFile(fileName))
+	{
+		std::cout << "Failed to read the map0\n";
+		return;
+	}
+	
+	int W = img.getSize().x, H = img.getSize().y;
+	int col = 0, row = 0;
+	int s = 32;
+	while (row < H)
+	{
+		sf::Color color = img.getPixel(col, row);
+		int r = color.r, g = color.g, b = color.b;
+		if (r == 0 && g == 255 && b == 0 || r == 0 && g == 255 && b == 255)
+		{
+			spawnWall(col, row, s, r == 0 && g == 255 && b == 255);
+		}
+		else if (r == 255 && g == 255 && b == 255)
+		{
+			spawnTorch(col, row, s, true);
+		}
+		else if (r == 255 && g == 255 && b == 0)
+		{
+			spawnKey(col, row, s);
+		}
+		else if (r == 0 && g == 0 && b == 255)
+		{
+			spawnDoor(col, row, s);
+			m_numDoor++;
+		}
+		else if (r == 255 && g == 0 && b == 0)
+		{
+			spawnPlayer(col, row, s);
+		}
+
+		col++;
+		if (col >= W)
+		{
+			col = 0;
+			row++;
+		}
+	}
+
+	m_entityManager.update();
+
+	for (auto& e : m_entityManager.getEntities("torch"))
+	{
+		setRayForTorch(e);
+	}
 }
 
 void ScenePlay::wallCollision(const std::string& tag)

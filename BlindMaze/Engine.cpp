@@ -33,7 +33,7 @@ void Engine::init(const std::string& config)
 
 	m_window.setFramerateLimit(winConf.FL);
 
-	changeScene("PLAY", std::make_shared<ScenePlay>(this, 0));
+	changeScene("PLAY", std::make_shared<ScenePlay>(this, 0, "res/config/default.json"));
 }
 
 void Engine::update()

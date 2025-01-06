@@ -1,0 +1,12 @@
+{
+    "m_drawEntities"	:false,
+    "m_drawPlayer"		: true,
+    "m_drawMousePos"	: false,
+    "m_drawLight"		: true,
+    "m_playerLight"		: true,
+    "m_drawRay"			: false,
+    "m_drawGui"			: true,
+    "m_transParentBox"	: true,
+    "m_collision"		: true
+
+}

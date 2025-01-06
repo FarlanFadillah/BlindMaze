@@ -22,16 +22,16 @@ private:
 
 	size_t m_numDoor		= 0;
 	int level = 0;
-	bool m_drawEntities		= false;
-	bool m_drawPlayer		= true;
-	bool m_drawMousePos		= false;
-	bool m_drawLight		= true;
-	bool m_playerLight		= true;
-	bool m_drawRay			= false;
-	bool m_drawGui			= true;
+	bool m_drawEntities;
+	bool m_drawPlayer;
+	bool m_drawMousePos;
+	bool m_drawLight;
+	bool m_playerLight;
+	bool m_drawRay;
+	bool m_drawGui;
 
-	bool m_transParentBox	= true;
-	bool m_collision		= true;
+	bool m_transParentBox;
+	bool m_collision;
 
 	bool mouseMoved			= false;
 
@@ -55,7 +55,10 @@ private:
 	void setRayForPlayer(std::shared_ptr<Entity> e);
 	void setRayForTorch(std::shared_ptr<Entity> e);
 	void updateTorchRay(std::shared_ptr<Entity> e);
+
+
 	void readMap(const std::string& level);
+	void imageToMap(const std::string& fileName);
 
 	void wallCollision(const std::string& tag);
 	void itemCollision(const std::string& tag);
@@ -77,7 +80,9 @@ private:
 public:
 
 	ScenePlay();
-	ScenePlay(Engine* engine, const int level);
+	ScenePlay(Engine* engine, const int level, const std::string& config);
+
+	void init(const std::string& config);
 
 };
 

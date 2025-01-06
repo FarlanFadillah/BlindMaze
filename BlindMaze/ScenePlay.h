@@ -22,6 +22,9 @@ private:
 
 	size_t m_numDoor		= 0;
 	int level = 0;
+
+	bool debugMode;
+
 	bool m_drawEntities;
 	bool m_drawPlayer;
 	bool m_drawMousePos;

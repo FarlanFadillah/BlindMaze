@@ -16,13 +16,18 @@ ScenePlay::ScenePlay(Engine* engine, const int _level, const std::string& config
 	registerAction(sf::Keyboard::S, "DOWN");
 	registerAction(sf::Keyboard::D, "RIGHT");
 	registerAction(sf::Keyboard::W, "UP");
-	/*registerAction(sf::Keyboard::F1, "DRAW_LIGHT");
-	registerAction(sf::Keyboard::F2, "DRAW_RAY");
-	registerAction(sf::Keyboard::F3, "DRAW_ENTITIES");
-	registerAction(sf::Keyboard::F4, "DRAW_MOUSEPOS");
-	registerAction(sf::Keyboard::F5, "TRANSPARENT_BOX");
-	registerAction(sf::Keyboard::F6, "COLLISION");
-	registerAction(sf::Keyboard::F7, "NEXT_LEVEL");*/
+
+	if (debugMode)
+	{
+		registerAction(sf::Keyboard::F1, "DRAW_LIGHT");
+		registerAction(sf::Keyboard::F2, "DRAW_RAY");
+		registerAction(sf::Keyboard::F3, "DRAW_ENTITIES");
+		registerAction(sf::Keyboard::F4, "DRAW_MOUSEPOS");
+		registerAction(sf::Keyboard::F5, "TRANSPARENT_BOX");
+		registerAction(sf::Keyboard::F6, "COLLISION");
+		registerAction(sf::Keyboard::F7, "NEXT_LEVEL");
+	}
+
 	registerAction(sf::Keyboard::F, "PLAYER_LIGHT");
 
 	ostrich_regular.loadFromFile("res/fonts/ostrich-regular.ttf");
@@ -52,6 +57,7 @@ void ScenePlay::init(const std::string& config)
 	m_drawGui = val["m_drawGui"].asBool();
 	m_transParentBox = val["m_transParentBox"].asBool();
 	m_collision = val["m_collision"].asBool();
+	debugMode = val["debugMode"].asBool();
 }
 
 

@@ -7,6 +7,7 @@
     "m_drawRay"			: false,
     "m_drawGui"			: true,
     "m_transParentBox"	: true,
-    "m_collision"		: true
+    "m_collision"		: true,
+    "debugMode"         : false
 
 }

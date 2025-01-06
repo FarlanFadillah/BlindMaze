@@ -8,29 +8,7 @@ constexpr auto PI = 3.14159265;
 class Physics {
 public:
     // Checking intersetion between lines
-    void intersect(const sf::Vector2f& a, sf::Vertex& bo, const sf::Vector2f& c, const sf::Vector2f& d)
-    {
-        sf::Vector2f b(bo.position.x, bo.position.y);
-        sf::Vector2f r(b - a), s(d - c);
-        float rXs = cross(r, s);
-        sf::Vector2f cma(c - a);
-        float amcXs(cross(cma, s));
-        float amcXr(cross(cma, r));
-
-        float t(amcXs / rXs);
-        float u(amcXr / rXs);
-
-        //std::cout << c.x << "  " << c.y << "\n";
-        //std::cout << d.x << "  " << d.y << "\n";
-
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
-        {
-            b = a + (r * t);
-            bo.position = sf::Vector2f(b.x, b.y);
-        }
-    }
-
-    bool isIntersect(const sf::Vector2f& a, sf::Vertex& bo, const sf::Vector2f& c, const sf::Vector2f& d)
+    bool intersect(const sf::Vector2f& a, sf::Vertex& bo, const sf::Vector2f& c, const sf::Vector2f& d)
     {
         sf::Vector2f b(bo.position.x, bo.position.y);
         sf::Vector2f r(b - a), s(d - c);
@@ -51,7 +29,22 @@ public:
             bo.position = sf::Vector2f(b.x, b.y);
             return true;
         }
+
         return false;
+    }
+
+    bool isIntersect(const sf::Vector2f& a, sf::Vertex& bo, const sf::Vector2f& c, const sf::Vector2f& d)
+    {
+        sf::Vector2f b(bo.position.x, bo.position.y);
+        sf::Vector2f r(b - a), s(d - c);
+        float rXs = cross(r, s);
+        sf::Vector2f cma(c - a);
+        float amcXs(cross(cma, s));
+        float amcXr(cross(cma, r));
+
+        float t(amcXs / rXs);
+        float u(amcXr / rXs);
+        return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
     }
 
     void lightEffect(std::vector<sf::Vertex>& vectors, const Vec2& cp, const float distance)
@@ -86,7 +79,6 @@ public:
 
     void getRectanglePoints( std::vector<sf::Vertex>& vectors,std::vector<std::shared_ptr<Entity>>& boxes, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
     {
-       
         for (auto& b : boxes)
         {
             for (const auto& temp : b->getComponent<CVertex>().vertex)
@@ -126,7 +118,6 @@ public:
 
     void setStaticRectanglePoints(std::vector<sf::Vertex>& vectors, std::vector<CVertex>& boxes, const Vec2& cp, const sf::Vector2f& m_pos, const float scope, const float length)
     {
-
         for (auto& b : boxes)
         {
             for (const auto& temp : b.vertex)
@@ -318,6 +309,25 @@ public:
         );
     }
 
+    void IntersectRay(std::vector<sf::Vertex>& angle, std::vector<sf::Vertex>& surfaceLine, const sf::Vector2f& pPos, const std::vector<std::shared_ptr<Entity>>& entities)
+    {
+        for (auto& e : angle)
+        {
+            for (const auto& wall : entities)
+            {
+                const auto& f = wall->getComponent<CVertex>().vertex;
+                if(intersect(pPos, e, f.at(0).position, f.at(1).position)) surfaceLine.push_back(e);
+
+                if(intersect(pPos, e, f.at(1).position, f.at(2).position)) surfaceLine.push_back(e); 
+
+                if(intersect(pPos, e, f.at(2).position, f.at(3).position)) surfaceLine.push_back(e); 
+
+                if(intersect(pPos, e, f.at(3).position, f.at(0).position)) surfaceLine.push_back(e);
+
+            }
+        }
+    }
+
     void IntersectRay(std::vector<sf::Vertex>& angle, const sf::Vector2f& pPos, const std::vector<std::shared_ptr<Entity>>& entities)
     {
         for (auto& e : angle)
@@ -326,7 +336,7 @@ public:
             for (const auto& wall : entities)
             {
                 const auto& f = wall->getComponent<CVertex>().vertex;
-                intersect(pPos, e, f.at(0).position,f.at(1).position);
+                intersect(pPos, e, f.at(0).position, f.at(1).position);
                 intersect(pPos, e, f.at(1).position, f.at(2).position);
                 intersect(pPos, e, f.at(2).position, f.at(3).position);
                 intersect(pPos, e, f.at(3).position, f.at(0).position);
@@ -409,6 +419,23 @@ public:
                 sf::Vertex(sf::Vector2f(e.position.x, e.position.y), sf::Color::Red),
                 }
                 );
+        }
+    }
+
+    void addSurfaceLine(std::vector<sf::Vertex*>& ray, const std::vector<sf::Vertex>& angle)
+    {
+        for (auto* vertices : ray) {
+            delete[] vertices;
+        }
+        ray.clear();  // Clear the vector to avoid dangling pointers
+        for (int i = 0; i < angle.size()-1; i++)
+        {
+            ray.push_back(
+                new sf::Vertex[2]{
+                sf::Vertex(sf::Vector2f(angle[i].position.x, angle[i].position.y), sf::Color::White),
+                sf::Vertex(sf::Vector2f(angle[i + 1].position.x, angle[i + 1].position.y), sf::Color::White),
+                }
+            );
         }
     }
 

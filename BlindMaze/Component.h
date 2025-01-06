@@ -95,6 +95,8 @@ public:
 	float length = 250;
 
 	std::vector<sf::Vertex*> ray;
+	std::vector<sf::Vertex*> line;
+	std::vector<sf::Vertex> surfaceLine;
 	std::vector<sf::Vertex> angle;
 	std::vector<CVertex> staticVec;
 	sf::VertexArray light;

@@ -82,6 +82,10 @@ void ScenePlay::sRender()
 				window.draw(e, 2, sf::Lines);
 			}
 		}
+		for (auto& e : pl.line)
+		{
+			window.draw(e, 2, sf::Lines); 
+		}
 
 		auto& ct = player->getComponent<CTransform>();
 		auto& bb = player->getComponent<CBoundingBox>();
@@ -428,7 +432,6 @@ void ScenePlay::setRayForPlayer(std::shared_ptr<Entity> e)
 	if (!e->hasComponent<CLight>()) return;
 	auto& pPos = e->getComponent<CTransform>().pos;
 	auto& pl = e->getComponent<CLight>();
-	pl.ray.clear();
 	pl.angle.clear();
 	phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("non_transparent"), pPos, m_wpos, pl.scope, pl.length);
 	phy.getRectanglePoints(pl.angle, m_entityManager.getEntities("transparent"), pPos, m_wpos, pl.scope, pl.length);
@@ -448,6 +451,8 @@ void ScenePlay::setRayForPlayer(std::shared_ptr<Entity> e)
 	phy.addLight(pl.light, pl.angle, pPos, 0);
 
 	if (m_drawRay) phy.addRay(pl.ray, pl.angle, pPos);
+
+	//phy.addSurfaceLine(pl.line, pl.surfaceLine);
 }
 
 void ScenePlay::updateTorchRay(std::shared_ptr<Entity> e)
@@ -473,6 +478,7 @@ void ScenePlay::updateTorchRay(std::shared_ptr<Entity> e)
 	phy.addLight(pl.light, pl.angle, pPos, 1);
 
 	if (m_drawRay) phy.addRay(pl.ray, pl.angle, pPos);
+
 }
 
 void ScenePlay::setRayForTorch(std::shared_ptr<Entity> e)
@@ -481,9 +487,24 @@ void ScenePlay::setRayForTorch(std::shared_ptr<Entity> e)
 	if (!e->hasComponent<CLight>()) return;
 	auto& pPos = e->getComponent<CTransform>().pos;
 	auto& pl = e->getComponent<CLight>();
-	pl.ray.clear();
 	pl.angle.clear();
 	phy.getStaticRectanglePoints(pl.staticVec, m_entityManager.getEntities("non_transparent"), pPos, m_wpos, pl.scope, pl.length);
+	phy.setStaticRectanglePoints(pl.angle, pl.staticVec, pPos, m_wpos, pl.scope, pl.length);
+
+	if (pl.angle.empty()) return;
+	phy.IntersectStaticRay(pl.angle, sf::Vector2f(pPos.x, pPos.y), pl.staticVec);
+	phy.IntersectRay(pl.angle, sf::Vector2f(pPos.x, pPos.y), m_entityManager.getEntities("player"));
+
+	//sort all ray vector with scope
+	phy.sortVector(pl.angle, pPos, m_wpos, pl.scope);
+
+	//adding light effect
+	phy.lightEffect(pl.angle, pPos, pl.length);
+
+	//add the ligth
+	phy.addLight(pl.light, pl.angle, pPos, 1);
+
+	if (m_drawRay) phy.addRay(pl.ray, pl.angle, pPos);
 }
 
 
